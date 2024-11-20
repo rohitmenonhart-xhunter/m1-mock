@@ -53,7 +53,7 @@ export default function Page() {
       className="h-full grid content-center bg-[var(--lk-bg)]"
     >
       <h1 className="text-center text-2xl font-bold mb-4">
-        Mock-Sphere: Your Mock Interview Trainer
+        Mockster : let's begin
       </h1>
       <LiveKitRoom
         token={connectionDetails?.participantToken}
