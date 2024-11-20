@@ -67,14 +67,9 @@ export function NoAgentNotification(props: NoAgentNotificationProps) {
             </svg>
           </div>
           <p className="text-pretty w-max">
-            It&apos;s quiet... too quiet. I think you are out of the time slot alloted.Please contact core team.</p>
-          <a
-            href="https://docs.livekit.io/agents/quickstarts/s2s/"
-            target="_blank"
-            className="underline whitespace-nowrap"
-          >
-            View guide
-          </a>
+            It&apos;s quiet... too quiet.It seems like your in unalloted time.Contact core team.
+          </p>
+          
           <button onClick={() => setShowNotification(false)}>
             {/* Close Icon */}
             <svg
