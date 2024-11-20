@@ -67,7 +67,7 @@ export function NoAgentNotification(props: NoAgentNotificationProps) {
             </svg>
           </div>
           <p className="text-pretty w-max">
-            It&apos;s quiet... too quiet.It seems like your in unalloted time.Contact core team.
+            It seems like your in unalloted time.Contact core team.
           </p>
           
           <button onClick={() => setShowNotification(false)}>
