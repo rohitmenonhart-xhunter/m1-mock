@@ -15,16 +15,17 @@ import { MediaDeviceFailure } from "livekit-client";
 import type { ConnectionDetails } from "./api/connection-details/route";
 import { NoAgentNotification } from "@/components/NoAgentNotification";
 import { CloseIcon } from "@/components/CloseIcon";
+import VoiceRecorder from "@/components/VoiceRecorder";
 
 export default function Page() {
-  const [connectionDetails, updateConnectionDetails] = useState<
-    ConnectionDetails | undefined
-  >(undefined);
+  const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | undefined>(undefined);
   const [agentState, setAgentState] = useState<AgentState>("disconnected");
   const [showModal, setShowModal] = useState(false);
   const [userKey, setUserKey] = useState("");
+  const [timer, setTimer] = useState(780); // Timer starts at 780 seconds (13 minutes)
+  const [timerActive, setTimerActive] = useState(false); // Flag to manage timer state
 
-  const validKey = "v77"; // Replace with your actual key
+  const validKey = "v77"; // Replace with your actual valid key
 
   const onConnectButtonClicked = useCallback(() => {
     setShowModal(true);
@@ -37,43 +38,71 @@ export default function Page() {
     }
 
     setShowModal(false);
-    const url = new URL(
-      process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? "/api/connection-details",
-      window.location.origin
-    );
-    fetch(url.toString())
-      .then(response => response.json())
-      .then(connectionDetailsData => updateConnectionDetails(connectionDetailsData));
+    const endpoint = process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT || "/api/connection-details";
+
+    fetch(endpoint.startsWith("http") ? endpoint : `${window.location.origin}${endpoint}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((connectionDetailsData) => setConnectionDetails(connectionDetailsData))
+      .catch((err) => {
+        console.error("Error fetching connection details:", err);
+        alert("Failed to fetch connection details. Please try again later.");
+      });
+
+    // Start the timer once the correct key is entered
+    setTimerActive(true);
   }, [userKey]);
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (timerActive && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000); // Decrement timer every second
+    } else if (timer === 0) {
+      alert("Time's up!");
+      // Optionally reset the timer or take any action when time is up
+    }
+    return () => clearInterval(interval); // Cleanup on unmount or when the timer is stopped
+  }, [timerActive, timer]);
+
   return (
-    <main
-      data-lk-theme="default"
-      className="h-full grid content-center bg-[var(--lk-bg)]"
-    >
-      <h1 className="text-center text-2xl font-bold mb-4">
-        Mockster : let's begin
-      </h1>
+    <main data-lk-theme="default" className="h-full grid content-center bg-[var(--lk-bg)]">
+      <h1 className="text-center text-2xl font-bold mb-4">Mockster: Let's Begin</h1>
+
       <LiveKitRoom
         token={connectionDetails?.participantToken}
         serverUrl={connectionDetails?.serverUrl}
-        connect={connectionDetails !== undefined}
+        connect={!!connectionDetails}
         audio={true}
         video={false}
         onMediaDeviceFailure={onDeviceFailure}
-        onDisconnected={() => {
-          updateConnectionDetails(undefined);
-        }}
+        onDisconnected={() => setConnectionDetails(undefined)}
         className="grid grid-rows-[2fr_1fr] items-center"
       >
         <SimpleVoiceAssistant onStateChange={setAgentState} />
-        <ControlBar
-          onConnectButtonClicked={onConnectButtonClicked}
-          agentState={agentState}
-        />
+        <ControlBar onConnectButtonClicked={onConnectButtonClicked} agentState={agentState} />
         <RoomAudioRenderer />
         <NoAgentNotification state={agentState} />
       </LiveKitRoom>
+
+      {/* Show Voice Recorder only when the user has entered the correct access key */}
+      {userKey === validKey && (
+        <div className="mt-4 flex justify-center">
+          <VoiceRecorder /> {/* Voice recorder integration */}
+        </div>
+      )}
+
+      {/* Timer Display */}
+      {userKey === validKey && (
+        <div className="mt-4 text-center">
+          <p>Time remaining: {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, "0")}</p>
+        </div>
+      )}
 
       {showModal && (
         <div className="modal">
@@ -94,13 +123,13 @@ export default function Page() {
   );
 }
 
-function SimpleVoiceAssistant(props: {
-  onStateChange: (state: AgentState) => void;
-}) {
+function SimpleVoiceAssistant({ onStateChange }: { onStateChange: (state: AgentState) => void }) {
   const { state, audioTrack } = useVoiceAssistant();
+
   useEffect(() => {
-    props.onStateChange(state);
-  }, [props, state]);
+    onStateChange(state);
+  }, [state, onStateChange]);
+
   return (
     <div className="h-[300px] max-w-[90vw] mx-auto">
       <BarVisualizer
@@ -114,47 +143,45 @@ function SimpleVoiceAssistant(props: {
   );
 }
 
-function ControlBar(props: {
+function ControlBar({
+  onConnectButtonClicked,
+  agentState,
+}: {
   onConnectButtonClicked: () => void;
   agentState: AgentState;
 }) {
-  /**
-   * Use Krisp background noise reduction when available.
-   */
-
-
   return (
     <div className="relative h-[100px]">
       <AnimatePresence>
-        {props.agentState === "disconnected" && (
+        {agentState === "disconnected" && (
           <motion.button
             initial={{ opacity: 0, top: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, top: "-10px" }}
             transition={{ duration: 1, ease: [0.09, 1.04, 0.245, 1.055] }}
             className="uppercase absolute left-1/2 -translate-x-1/2 px-4 py-2 bg-white text-black rounded-md"
-            onClick={() => props.onConnectButtonClicked()}
+            onClick={onConnectButtonClicked}
           >
-            Start interview
+            Start Interview
           </motion.button>
         )}
       </AnimatePresence>
+
       <AnimatePresence>
-        {props.agentState !== "disconnected" &&
-          props.agentState !== "connecting" && (
-            <motion.div
-              initial={{ opacity: 0, top: "10px" }}
-              animate={{ opacity: 1, top: 0 }}
-              exit={{ opacity: 0, top: "-10px" }}
-              transition={{ duration: 0.4, ease: [0.09, 1.04, 0.245, 1.055] }}
-              className="flex h-8 absolute left-1/2 -translate-x-1/2  justify-center"
-            >
-              <VoiceAssistantControlBar controls={{ leave: false }} />
-              <DisconnectButton>
-                <CloseIcon />
-              </DisconnectButton>
-            </motion.div>
-          )}
+        {agentState !== "disconnected" && agentState !== "connecting" && (
+          <motion.div
+            initial={{ opacity: 0, top: "10px" }}
+            animate={{ opacity: 1, top: 0 }}
+            exit={{ opacity: 0, top: "-10px" }}
+            transition={{ duration: 0.4, ease: [0.09, 1.04, 0.245, 1.055] }}
+            className="flex h-8 absolute left-1/2 -translate-x-1/2 justify-center"
+          >
+            <VoiceAssistantControlBar controls={{ leave: false }} />
+            <DisconnectButton>
+              <CloseIcon />
+            </DisconnectButton>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
@@ -163,6 +190,6 @@ function ControlBar(props: {
 function onDeviceFailure(error?: MediaDeviceFailure) {
   console.error(error);
   alert(
-    "Error acquiring microphone permissions. Please make sure you grant the necessary permissions in your browser and reload the tab"
+    "Error acquiring microphone permissions. Please make sure you grant the necessary permissions in your browser and reload the tab."
   );
 }
