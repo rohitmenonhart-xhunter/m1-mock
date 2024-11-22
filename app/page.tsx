@@ -18,19 +18,23 @@ import { CloseIcon } from "@/components/CloseIcon";
 import VoiceRecorder from "@/components/VoiceRecorder";
 
 export default function Page() {
-  const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | undefined>(undefined);
+  const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | undefined>(
+    undefined
+  );
   const [agentState, setAgentState] = useState<AgentState>("disconnected");
   const [showModal, setShowModal] = useState(false);
   const [userKey, setUserKey] = useState("");
   const [timer, setTimer] = useState(780); // Timer starts at 780 seconds (13 minutes)
-  const [timerActive, setTimerActive] = useState(false); // Flag to manage timer state
+  const [timerActive, setTimerActive] = useState(false);
 
   const validKey = "v77"; // Replace with your actual valid key
 
+  // Start interview button click handler
   const onConnectButtonClicked = useCallback(() => {
     setShowModal(true);
   }, []);
 
+  // Key submission and fetching connection details
   const handleKeySubmit = useCallback(() => {
     if (userKey !== validKey) {
       alert("Invalid access key. Please try again.");
@@ -53,22 +57,30 @@ export default function Page() {
         alert("Failed to fetch connection details. Please try again later.");
       });
 
-    // Start the timer once the correct key is entered
+    // Start the timer
     setTimerActive(true);
   }, [userKey]);
 
+  // Timer functionality
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (timerActive && timer > 0) {
       interval = setInterval(() => {
         setTimer((prevTimer) => prevTimer - 1);
-      }, 1000); // Decrement timer every second
+      }, 1000);
     } else if (timer === 0) {
       alert("Time's up!");
-      // Optionally reset the timer or take any action when time is up
     }
-    return () => clearInterval(interval); // Cleanup on unmount or when the timer is stopped
+    return () => clearInterval(interval);
   }, [timerActive, timer]);
+
+  // Error handler for microphone access issues
+  function onDeviceFailure(error?: MediaDeviceFailure) {
+    console.error(error);
+    alert(
+      "Error acquiring microphone permissions. Please ensure you grant the necessary permissions in your browser and reload the tab."
+    );
+  }
 
   return (
     <main data-lk-theme="default" className="h-full grid content-center bg-[var(--lk-bg)]">
@@ -90,20 +102,22 @@ export default function Page() {
         <NoAgentNotification state={agentState} />
       </LiveKitRoom>
 
-      {/* Show Voice Recorder only when the user has entered the correct access key */}
+      {/* Voice Recorder and Timer */}
       {userKey === validKey && (
-        <div className="mt-4 flex justify-center">
-          <VoiceRecorder /> {/* Voice recorder integration */}
-        </div>
+        <>
+          <div className="mt-4 flex justify-center">
+            <VoiceRecorder />
+          </div>
+          <div className="mt-4 text-center">
+            <p>
+              Time remaining: {Math.floor(timer / 60)}:
+              {String(timer % 60).padStart(2, "0")}
+            </p>
+          </div>
+        </>
       )}
 
-      {/* Timer Display */}
-      {userKey === validKey && (
-        <div className="mt-4 text-center">
-          <p>Time remaining: {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, "0")}</p>
-        </div>
-      )}
-
+      {/* Access Key Modal */}
       {showModal && (
         <div className="modal">
           <div className="modal-content">
@@ -184,12 +198,5 @@ function ControlBar({
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-function onDeviceFailure(error?: MediaDeviceFailure) {
-  console.error(error);
-  alert(
-    "Error acquiring microphone permissions. Please make sure you grant the necessary permissions in your browser and reload the tab."
   );
 }
