@@ -59,7 +59,7 @@ function createParticipantToken(
 ) {
   const at = new AccessToken(API_KEY, API_SECRET, {
     ...userInfo,
-    ttl: "2d",
+    ttl: "7hrs",
   });
   const grant: VideoGrant = {
     room: roomName,
