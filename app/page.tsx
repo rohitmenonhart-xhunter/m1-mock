@@ -24,7 +24,7 @@ export default function Page() {
   const [agentState, setAgentState] = useState<AgentState>("disconnected");
   const [showModal, setShowModal] = useState(false);
   const [userKey, setUserKey] = useState("");
-  const [timer, setTimer] = useState(780); // Timer starts at 780 seconds (13 minutes)
+  const [timer, setTimer] = useState(600); // Timer starts at 780 seconds (13 minutes)
   const [timerActive, setTimerActive] = useState(false);
 
   const validKey = "v77"; // Replace with your actual valid key
@@ -106,7 +106,6 @@ export default function Page() {
       {userKey === validKey && (
         <>
           <div className="mt-4 flex justify-center">
-            <VoiceRecorder />
           </div>
           <div className="mt-4 text-center">
             <p>
